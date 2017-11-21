@@ -3,42 +3,57 @@ using System.Collections;
 using System.Collections.Generic;
 
 public class ArithemeticObject : MonoBehaviour {
+    
+    [HideInInspector]
+	public List<ArithemeticObject> mChildObjects = new List<ArithemeticObject>();
+	
+	//public EArithemeticObjectType mType;
+	
+	protected List<Vector3> mContactPointsInLocalSpace = new List<Vector3>();
+	
+	public ArithemeticObject parentArithemticObject;
 
-	private List<ArithemeticObject> mChildObjects = new List<ArithemeticObject>();
-	
-	public EArithemeticObjectType mType;
-	
-	private List<Vector3> mContactPointsInLocalSpace = new List<Vector3>();
+    public bool mIsComplete;
 
-	public enum EArithemeticObjectType
-	{
-		UNIT,
-		UNITSROD,
-		TEN,
-		TENSPLATE,
-		HUNDRED,
-		HUNDREDSCUBE,
-		THOUSAND,
-		THOUSANDSROD
+//	public enum EArithemeticObjectType // [TODO] take this out and replace it with inheritance, there should be a different class for each type of object
+//	{
+//		UNIT,
+//		UNITSROD,
+//		TEN,
+//		TENSPLATE,
+//		HUNDRED,
+//		HUNDREDSCUBE,
+//		THOUSAND,
+//		THOUSANDSROD
+//	
+//	}
 	
-	}
-	
-	public void Start()
+	protected virtual void Start()
 	{
-		if(mType == EArithemeticObjectType.UNIT)
+//		if(mType == EArithemeticObjectType.UNIT)
+//		{
+//			float cubeHalfEdge = 0.5f;
+//			mContactPointsInLocalSpace.Add(new Vector3(0,0,cubeHalfEdge));
+//			mContactPointsInLocalSpace.Add(new Vector3(0,0,-cubeHalfEdge));
+//			mContactPointsInLocalSpace.Add(new Vector3(-cubeHalfEdge,0,0));
+//			mContactPointsInLocalSpace.Add(new Vector3(cubeHalfEdge,0,0));
+//			mContactPointsInLocalSpace.Add(new Vector3(0,cubeHalfEdge,0));
+//			mContactPointsInLocalSpace.Add(new Vector3(0,-cubeHalfEdge,0));
+//		}
+//		else if(mType == EArithemeticObjectType.TEN || mType == EArithemeticObjectType.HUNDRED)
+//		{
+//			ArithemeticObject[] childArray = transform.GetComponentsInChildren<ArithemeticObject> ();
+//			mChildObjects.AddRange (childArray);
+//			UpdateContactPoints ();
+//		}
+		if(transform.parent != null)
 		{
-			float cubeHalfEdge = 0.5f;
-			mContactPointsInLocalSpace.Add(new Vector3(0,0,cubeHalfEdge));
-			mContactPointsInLocalSpace.Add(new Vector3(0,0,-cubeHalfEdge));
-			mContactPointsInLocalSpace.Add(new Vector3(-cubeHalfEdge,0,0));
-			mContactPointsInLocalSpace.Add(new Vector3(cubeHalfEdge,0,0));
-			mContactPointsInLocalSpace.Add(new Vector3(0,cubeHalfEdge,0));
-			mContactPointsInLocalSpace.Add(new Vector3(0,-cubeHalfEdge,0));
+			parentArithemticObject = transform.parent.gameObject.GetComponent<ArithemeticObject>();
 		}
     }
     
 	
-	public List<Vector3> GetContactPoints()
+	public virtual List<Vector3> GetContactPoints()
 	{
 		List<Vector3> contactPointsList = new List<Vector3>();
 		
@@ -51,24 +66,16 @@ public class ArithemeticObject : MonoBehaviour {
 	}
 	
 	
-	public void Attach (ArithemeticObject obj)
+	public virtual void Attach (ArithemeticObject obj)
 	{
-	
 		//this should be used only when this is the first child to be added to the parent
 		mChildObjects.Add(obj);
 		obj.transform.parent = transform;
 	}
 	
-	public void Attach (ArithemeticObject obj, Vector3 contactPoint)
+	public virtual void Attach (ArithemeticObject obj, Vector3 contactPoint)
 	{
-		switch (mType) {
-	
-		case EArithemeticObjectType.UNITSROD:
-		//calculate the local position of the new unit based on the direction in which it is added
-//		GameObject debugObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-//		debugObject.transform.position = contactPoint;
-//		debugObject.transform.localScale /= 10;
-//		
+				
 		Vector3 direction = (contactPoint - transform.position);
 		direction.Normalize();
 		Vector3 newPosition = contactPoint + direction * 0.125f;
@@ -97,21 +104,11 @@ public class ArithemeticObject : MonoBehaviour {
         	Vector3 contactPointInLocalSpace = transform.InverseTransformPoint(contactPoint);
 			int index =	mContactPointsInLocalSpace.FindIndex((point) => point == contactPointInLocalSpace);
 			Vector3 contactPointNew =  contactPoint + direction * 2 * 0.125f;
-			mContactPointsInLocalSpace[index] = transform.InverseTransformPoint(contactPointNew);
-			
+						mContactPointsInLocalSpace[index] = transform.InverseTransformPoint(contactPointNew);	
         }    
-		break;
-		case EArithemeticObjectType.TENSPLATE:
-			break;
-		case EArithemeticObjectType.HUNDREDSCUBE:
-			break;
-		case EArithemeticObjectType.THOUSANDSROD:
-			break;
-		
-		}
 	} 
 
-	Vector3 GetCenterPositionForObject ()
+	public Vector3 GetCenterPositionForObject ()
 	{
 		int objectCounter = 0;
 		Vector3 aggregatePosition = Vector3.zero;
@@ -121,11 +118,10 @@ public class ArithemeticObject : MonoBehaviour {
 			aggregatePosition += obj.transform.position;
 			objectCounter++;		
 		}
-		
 		return aggregatePosition / objectCounter;
 	}
 	
-	void OffsetAll(Vector3 positionOffset)
+	protected virtual void OffsetAll(Vector3 positionOffset)
 	{
 		foreach(ArithemeticObject obj in mChildObjects)
 		{
@@ -147,13 +143,28 @@ public class ArithemeticObject : MonoBehaviour {
 	
 	public void OnDrawGizmos()
 	{
-		if(mType != EArithemeticObjectType.UNITSROD)
-			return;
 		List<Vector3> contactPointsInWorldSpace = GetContactPoints();
 		foreach(Vector3 contactPoint in contactPointsInWorldSpace )
 		{
 			Gizmos.DrawSphere(contactPoint, 0.02f);
 		}
 	}
+	
+	public void SetArithemeticObjectParent(ArithemeticObject parent)
+	{
+		parentArithemticObject = parent;
+	}
+	
+	public ArithemeticObject GetArithemeticObjectParent()
+	{
+		if(parentArithemticObject != null)
+			return parentArithemticObject.GetArithemeticObjectParent();
+		else
+			return this; //if this does not have a parent then this is the parent.
+	}
+
+	public virtual void UpdateContactPoints ()
+	{
+	}	
 
 }
